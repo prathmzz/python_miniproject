@@ -5,19 +5,27 @@ import subprocess
 
 def open_lecture_page():
     print("Opening Lecture Page...")
-    subprocess.run(["python", "lecture_page.py"])
+    # subprocess.run(["python", "lecture_page.py"])
+    root.destroy()
+    import lecture_page
 
 def open_Volunteer_page():
     print("Opening Volunteer Page...")
-    subprocess.run(["python", "Volunteer_page.py"])
+    root.destroy()
+    import Volunteer_page
+    # subprocess.run(["python", "Volunteer_page.py"])
 
 def open_teacher_section():
     print("Opening Teacher Section Page...")
-    subprocess.run(["python", "teacher_section.py"])
+    # subprocess.run(["python", "teacher_section.py"])
+    root.destroy()
+    import teacher_section
 
 def open_Rescue():
     print("Opening Rescue Page...")
     subprocess.run(["python", "Rescue.py"])
+    root.destroy()
+    import Rescue
 
 
 # Define functions for different pages
@@ -70,7 +78,7 @@ root.geometry("800x600+100+100")
 topbar = Frame(root, bg="#ed5876", width=600, height=50)
 topbar.pack(side=TOP, fill=X)
 
-title = Label(topbar, text="Donation", font=("Arial", 20, "bold"), bg="#ed5876", fg="#ffffff")
+title = Button(topbar, text="Animal Connect", font=("Arial", 15, "bold"),bd=0, bg="#ed5876", fg="#ffffff",activebackground='#eb4163')
 title.pack(side=LEFT, padx=20, pady=10)
 
 user_icon_image = PhotoImage(file="Images/settings_icon.png").subsample(2)
@@ -105,9 +113,9 @@ for item in menu_items:
 
     # Modify button commands
     if item[0] == "Donation":
-        button.config(command=open_lecture_page)
-    elif item[0] == "Adoption":
         button.config(command=open_teacher_section)
+    elif item[0] == "Adoption":
+        button.config(command=open_lecture_page)
     elif item[0] == "Volunteer":
         button.config(command=open_Volunteer_page)
     elif item[0] == "Rescue":
