@@ -1,25 +1,61 @@
 from tkinter import *
 from PIL import ImageTk
 from tkinter import messagebox
+import pymysql
 
+def clear():
+    emailEntry.delete(0, END)
+    usernameEntry.delete(0, END)
+    passwordEntry.delete(0, END)
+    confirmpasswordEntry.delete(0, END)
+    check.set(0)
 
 #Functionality Part
-def open_loginPage():
+def connect_database():
+    if emailEntry.get() == '' or usernameEntry.get() == '' or passwordEntry.get() == '' or confirmpasswordEntry.get() == '':
+        messagebox.showerror('Error', 'All fields are required')
+    elif passwordEntry.get() != confirmpasswordEntry.get():
+        messagebox.showerror('Error', 'Passwords do not match')
+    elif check.get() == 0:
+        messagebox.showerror('Error', 'Please accept terms and condition')
+    else:
+        try:
+            con = pymysql.connect(host='localhost', user='root', password='v2wcoder@mysql#123')
+            mycursor = con.cursor()
+
+        except pymysql.Error as e:
+            messagebox.showerror('Error', f'Database Connectivity Issue: {str(e)}')
+            return
+        try: 
+            query = 'CREATE DATABASE IF NOT EXISTS userdata'
+            mycursor.execute(query)
+            query = 'USE userdata'
+            mycursor.execute(query)
+            query = 'CREATE TABLE IF NOT EXISTS data (id INT AUTO_INCREMENT PRIMARY KEY NOT NULL, email VARCHAR(50), username VARCHAR(100), password VARCHAR(20))'
+            mycursor.execute(query)
+        except:
+            mycursor.execute('use userdata')
+        
+        query='select * from data where username=%s'
+        mycursor.execute(query,(usernameEntry.get()))
+
+        row = mycursor.fetchone()
+        if row != NONE:
+            messagebox.showerror('Error', f'Username already exists')
+
+        else:
+            query='insert into data(email, username, password) values(%s, %s, %s)' 
+            mycursor.execute(query,(emailEntry.get(), usernameEntry.get(), passwordEntry.get()))
+            con.commit()
+            con.close()
+            messagebox.showinfo('Success','Registeration is successful')
+            clear()
+            signup_window.destroy()
+            import signin
+
+def open_login_page():
     signup_window.destroy()
     import signin
-
-def register():
-    username = usernameEntry.get()
-    password = passwordEntry.get()
-
-    # Add your registration logic here
-    # For simplicity, let's check if the username and password are not empty
-    if username and password:
-        messagebox.showinfo("Registration Successful", "Account created for " + username + "!")
-        signup_window.destroy()
-        import new
-    else:
-        messagebox.showerror("Registration Failed", "Please enter a valid username and password")
 
 #GUI part
 signup_window = Tk()
@@ -67,18 +103,19 @@ confirmpasswordEntry = Entry(frame,width=30,font=('Microsost Yahei UI Light',10,
 confirmpasswordEntry.grid(row=8,column=0,sticky='w',padx=40)
 
 #terms and conditrions checkbox
-termandconditions = Checkbutton(frame,text='I agree to the terms & conditions',font=('Microsost Yahei UI Light',8,'bold'),fg='firebrick1',bg='white',activebackground='white',activeforeground='firebrick1',cursor='hand2')
+check=IntVar()
+termandconditions = Checkbutton(frame,text='I agree to the terms & conditions',font=('Microsost Yahei UI Light',8,'bold'),fg='firebrick1',bg='white',activebackground='white',activeforeground='firebrick1',cursor='hand2', variable=check)
 termandconditions.grid(row=9,column=0,padx=2,pady=13)
 
 #signup button
-signupButton = Button(frame,text='SignUp',font=('Open Sans',16,'bold'),bd=0,bg='firebrick1',fg='white',activebackground='firebrick1',activeforeground='white',width=17,command=register)
+signupButton = Button(frame,text='SignUp',font=('Open Sans',16,'bold'),bd=0,bg='firebrick1',fg='white',activebackground='firebrick1',activeforeground='white',width=17,command=connect_database)
 signupButton.grid(row=10,column=0,pady=10)
 
 #redirecteing to login
 alreadyaccountLabel = Label(frame,text='Already Have An Account?',font=('Open Sans',9,'bold'),fg='firebrick1',bg='white')
 alreadyaccountLabel.grid(row=11,column=0,sticky='w',padx=25,pady=5)
 
-loginButton = Button(frame, text='LogIN!', font=('Open Sans', 9, 'bold underline'), fg='blue', bg='white', cursor='hand2', bd=0, activeforeground='blue', activebackground='white',command=open_loginPage)
+loginButton = Button(frame, text='LogIN!', font=('Open Sans', 9, 'bold underline'), fg='blue', bg='white', cursor='hand2', bd=0, activeforeground='blue', activebackground='white',command=open_login_page)
 loginButton.place(x=190, y=385)
 
 
