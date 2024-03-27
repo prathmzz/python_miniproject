@@ -1,40 +1,127 @@
 import tkinter as tk
+import sqlite3
 from tkinter import *
+from tkinter import filedialog
+from PIL import Image, ImageTk
+
 from sidebar import create_sidebar  # Import the create_sidebar function
-
-def add_card():
-    name = name_entry.get()
-    photo = photo_entry.get()
-    address = address_entry.get()
-    phone = phone_entry.get()
-
+import io
+def add_card(name, address, phone, photo=None):
     # Create a new card frame
     card_frame = tk.Frame(cards_frame, bg="white", bd=2, relief=tk.RIDGE)
     card_frame.pack(padx=5, pady=5, side=tk.LEFT)  # Pack the card frame side by side
 
-    # Display information in the card
+    # Create a canvas for the image and rectangle box
+    canvas = tk.Canvas(card_frame, bg="white", width=150, height=400)
+    canvas.pack(anchor=tk.N)
+
+    # Draw rectangle box
+    canvas.create_rectangle(10, 10, 140, 340, outline="black", width=2)
+
+    if photo:
+        # Resize image to fit inside the rectangle box
+        resized_photo = photo.resize((130, 330), Image.ANTIALIAS)
+        img = ImageTk.PhotoImage(resized_photo)
+
+        # Insert image into the rectangle box
+        canvas.create_image(75, 185, image=img)
+        canvas.image = img  # Keep reference to the image to prevent garbage collection
+
+    # Display name, address, and phone number below the image
     tk.Label(card_frame, text="Name: " + name, bg="white").pack(anchor=tk.W)
-    tk.Label(card_frame, text="Photo: " + photo, bg="white").pack(anchor=tk.W)
     tk.Label(card_frame, text="Address: " + address, bg="white").pack(anchor=tk.W)
     tk.Label(card_frame, text="Phone: " + phone, bg="white").pack(anchor=tk.W)
+
 
 def switch_to_card_page():
     input_frame.pack_forget()
     main_menu_frame.pack_forget()
     cards_frame.pack(fill=tk.BOTH, expand=True)
+    display_cards()
 
 def switch_to_main_menu():
-    input_frame.pack(fill=tk.BOTH, expand=True)
     cards_frame.pack_forget()
-    main_menu_frame.pack(fill=tk.BOTH, expand=True)   
+    main_menu_frame.pack(fill=tk.BOTH, expand=True)
+    input_frame.pack(fill=tk.BOTH, expand=True)
+
+def switch_to_image_page():
+    main_menu_frame.pack_forget()
+    image_page_frame.pack(fill=tk.BOTH, expand=True)
+    display_uploaded_image()
 
 def open_volunteer_page():
     print("")
+
+def create_database():
+    conn = sqlite3.connect("user_data.db")
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS Users (
+                Name TEXT,
+                Address TEXT,
+                Phone TEXT,
+                Photo BLOB
+                )''')
+    conn.commit()
+    conn.close()
+
+def insert_user_data(name, address, phone, photo=None):
+    conn = sqlite3.connect("user_data.db")
+    c = conn.cursor()
+    c.execute("INSERT INTO Users VALUES (?, ?, ?, ?)", (name, address, phone, photo))
+    conn.commit()
+    conn.close()
+
+def get_user_data():
+    conn = sqlite3.connect("user_data.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM Users")
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def display_cards():
+    # Clear existing cards
+    for widget in cards_frame.winfo_children():
+        widget.destroy()
+
+    # Display cards for all user data from the database
+    for row in get_user_data():
+        name, address, phone, photo = row
+        if photo:
+            photo = Image.open(photo)
+            photo.thumbnail((120, 120))  # Resize the image to fit within the card
+            photo = ImageTk.PhotoImage(photo)
+        add_card(name, address, phone, photo)
+
+def display_uploaded_image():
+    image_data = get_user_data()[-1][-1]  # Get the last uploaded image
+    if image_data:
+        photo = Image.open(io.BytesIO(image_data))
+        photo.thumbnail((400, 400))
+        photo = ImageTk.PhotoImage(photo)
+        uploaded_image_label.configure(image=photo)
+        uploaded_image_label.image = photo
+def upload_image():
+    filename = filedialog.askopenfilename(title="Select Image", filetypes=(("Image files", "*.png;*.jpg;*.jpeg"), ("All files", "*.*")))
+    if filename:
+        try:
+            image = Image.open(filename)
+            image_data = open(filename, 'rb').read()
+            insert_user_data('', '', '', image_data)
+            switch_to_card_page()  # After uploading image, switch to card page
+        except Exception as e:
+            print("Error uploading image:", e)
+
+
+
 
 root = Tk()
 root.title("Animal Connect")
 root.geometry("800x600+100+100")
 sidebar, buttons = create_sidebar(root)
+
+# Create database and table if they don't exist
+create_database()
 
 # Create a frame for the buttons in the white portion
 main_menu_frame = tk.Frame(root)
@@ -52,32 +139,53 @@ tk.Label(input_frame, text="Name:").grid(row=0, column=0, sticky=tk.W)
 name_entry = tk.Entry(input_frame, width=50)
 name_entry.grid(row=0, column=1, padx=5, pady=5)
 
-tk.Label(input_frame, text="Photo:").grid(row=1, column=0, sticky=tk.W)
-photo_entry = tk.Entry(input_frame, width=50)
-photo_entry.grid(row=1, column=1, padx=5, pady=5)
-
-tk.Label(input_frame, text="Address:").grid(row=2, column=0, sticky=tk.W)
+tk.Label(input_frame, text="Address:").grid(row=1, column=0, sticky=tk.W)
 address_entry = tk.Entry(input_frame, width=50)
-address_entry.grid(row=2, column=1, padx=5, pady=5)
+address_entry.grid(row=1, column=1, padx=5, pady=5)
 
-tk.Label(input_frame, text="Phone:").grid(row=3, column=0, sticky=tk.W)
+tk.Label(input_frame, text="Phone:").grid(row=2, column=0, sticky=tk.W)
 phone_entry = tk.Entry(input_frame, width=50)
-phone_entry.grid(row=3, column=1, padx=5, pady=5)
+phone_entry.grid(row=2, column=1, padx=5, pady=5)
 
-post_button = tk.Button(input_frame, text="Post", command=add_card)
-post_button.grid(row=4, columnspan=2, pady=10)
+def post_button_command():
+    insert_user_data(name_entry.get(), address_entry.get(), phone_entry.get())
+    switch_to_card_page()
+
+post_button = tk.Button(input_frame, text="Post", command=post_button_command)
+post_button.grid(row=3, columnspan=2, pady=10)
+
+# Create a button to upload image
+upload_image_button = tk.Button(input_frame, text="Upload Image", command=upload_image)
+upload_image_button.grid(row=4, columnspan=2, pady=10)
 
 # Frame to hold cards
 cards_frame = tk.Frame(root)
 
-# Button to go back to main menu
-back_button = tk.Button(cards_frame, text="Back to Main Menu", command=switch_to_main_menu)
-back_button.pack(pady=10)
+# Frame to display uploaded image
+image_page_frame = tk.Frame(root)
+
+# Label to display uploaded image
+uploaded_image_label = tk.Label(image_page_frame)
+uploaded_image_label.pack(pady=20)
+
 
 Label(button_frame, text="").pack(side=TOP, pady=10)
 
 # Configure button commands
 for button in buttons:
     button.config(command=open_volunteer_page)
+def clear_table(conn):
+    c = conn.cursor()
+    c.execute("DELETE FROM Users")
+    conn.commit()
+
+# Clear the table before inserting new records
+conn = sqlite3.connect("user_data.db")
+# clear_table(conn)
+conn.close()
 
 root.mainloop()
+
+
+root.mainloop()
+
