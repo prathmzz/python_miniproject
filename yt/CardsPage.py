@@ -3,35 +3,23 @@ import sqlite3
 from tkinter import *
 from tkinter import filedialog
 from PIL import Image, ImageTk
-
 from sidebar import create_sidebar  # Import the create_sidebar function
-import io
+
 def add_card(name, address, phone, photo=None):
     # Create a new card frame
     card_frame = tk.Frame(cards_frame, bg="white", bd=2, relief=tk.RIDGE)
     card_frame.pack(padx=5, pady=5, side=tk.LEFT)  # Pack the card frame side by side
 
-    # Create a canvas for the image and rectangle box
-    canvas = tk.Canvas(card_frame, bg="white", width=150, height=400)
-    canvas.pack(anchor=tk.N)
-
-    # Draw rectangle box
-    canvas.create_rectangle(10, 10, 140, 340, outline="black", width=2)
-
     if photo:
-        # Resize image to fit inside the rectangle box
-        resized_photo = photo.resize((130, 330), Image.ANTIALIAS)
-        img = ImageTk.PhotoImage(resized_photo)
-
-        # Insert image into the rectangle box
-        canvas.create_image(75, 185, image=img)
-        canvas.image = img  # Keep reference to the image to prevent garbage collection
+        # Display image in the card
+        photo_label = tk.Label(card_frame, image=photo, bg="white")
+        photo_label.image = photo
+        photo_label.pack(anchor=tk.N)
 
     # Display name, address, and phone number below the image
     tk.Label(card_frame, text="Name: " + name, bg="white").pack(anchor=tk.W)
     tk.Label(card_frame, text="Address: " + address, bg="white").pack(anchor=tk.W)
     tk.Label(card_frame, text="Phone: " + phone, bg="white").pack(anchor=tk.W)
-
 
 def switch_to_card_page():
     input_frame.pack_forget()
@@ -96,24 +84,17 @@ def display_cards():
 def display_uploaded_image():
     image_data = get_user_data()[-1][-1]  # Get the last uploaded image
     if image_data:
-        photo = Image.open(io.BytesIO(image_data))
+        photo = Image.open(image_data)
         photo.thumbnail((400, 400))
         photo = ImageTk.PhotoImage(photo)
         uploaded_image_label.configure(image=photo)
         uploaded_image_label.image = photo
+
 def upload_image():
     filename = filedialog.askopenfilename(title="Select Image", filetypes=(("Image files", "*.png;*.jpg;*.jpeg"), ("All files", "*.*")))
     if filename:
-        try:
-            image = Image.open(filename)
-            image_data = open(filename, 'rb').read()
-            insert_user_data('', '', '', image_data)
-            switch_to_card_page()  # After uploading image, switch to card page
-        except Exception as e:
-            print("Error uploading image:", e)
-
-
-
+        insert_user_data('', '', '', filename)
+        switch_to_image_page()
 
 root = Tk()
 root.title("Animal Connect")
@@ -168,24 +149,10 @@ image_page_frame = tk.Frame(root)
 uploaded_image_label = tk.Label(image_page_frame)
 uploaded_image_label.pack(pady=20)
 
-
 Label(button_frame, text="").pack(side=TOP, pady=10)
 
 # Configure button commands
 for button in buttons:
     button.config(command=open_volunteer_page)
-def clear_table(conn):
-    c = conn.cursor()
-    c.execute("DELETE FROM Users")
-    conn.commit()
-
-# Clear the table before inserting new records
-conn = sqlite3.connect("user_data.db")
-# clear_table(conn)
-conn.close()
 
 root.mainloop()
-
-
-root.mainloop()
-
